@@ -1,0 +1,107 @@
+// ==UserScript==
+// @name         超星手机端考试|打开考试不计时
+// @namespace    unrival
+// @version      1.6
+// @description  可以在电脑端进行只允许手机APP的考试
+// @author       unrival
+// @run-at       document-end
+//新版课程首页
+// @match        https://*.chaoxing.com/mycourse/stu*
+//收件箱点进考试列表
+// @match        https://mooc1-api.chaoxing.com/exam/test?*
+//旧版考试列表
+// @match        https://mooc1.chaoxing.com/exam/test?*
+//脚本重写的考试页面
+// @match        https://mooc1-api.chaoxing.com/exam/phoneExam?courseid=*
+//收件箱直接点进单个考试
+// @match        https://mooc1-api.chaoxing.com/exam/phone/task-exam?*
+// @match        https://mooc1-api.chaoxing.com/exam/phone/restart?*
+// @icon         http://pan-yz.chaoxing.com/favicon.ico
+// @grant        unsafeWindow
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @license      MIT
+// ==/UserScript==
+
+(()=>{
+    GM_setValue("testUrl","0");
+    var getQueryVariable = (variable) => {
+            let q = _l.search.substring(1),
+                v = q.split("&"),
+                r = false;
+            for (let i = 0, l = v.length; i < l; i++) {
+                let p = v[i].split("=");
+                p[0] == variable && (r = p[1]);
+            }
+            return r;
+        },
+        _w = unsafeWindow,
+        _d = _w.document,
+        _l = _w.location,
+        classId = getQueryVariable("clazzid")||getQueryVariable("classid")||getQueryVariable("clazzId")||getQueryVariable("classId"),
+        courseId = getQueryVariable("courseid")||getQueryVariable("courseId");
+    _l.href.indexOf("/mycourse/stu") !== -1&&(()=>{
+        let liE = _d.getElementsByTagName("li");
+        for(let i=0,len=liE.length;i<len;i++){
+            liE[i].getAttribute("dataname")=="ks"&&(()=>{
+                let newLi = document.createElement('li');
+                newLi.innerHTML = "<a href='https://mooc1-api.chaoxing.com/exam/phoneExam?courseid="+courseId+"&clazzid="+classId+"' target='_blank'><i class='ks'></i>手机端考试</a>";
+                liE[i].parentNode.appendChild(newLi);
+            })();
+        }
+    })();
+    _l.href.indexOf(".chaoxing.com/exam/test?") !== -1&&(()=>{
+        let ul01 = _d.getElementsByClassName("ul01");
+        ul01.length>0&&(()=>{
+            let newLink = document.createElement('li');
+            newLink.innerHTML = "<a href='https://mooc1-api.chaoxing.com/exam/phoneExam?courseid="+courseId+"&clazzid="+classId+"' title='' style='padding:0px;''>| 手机端考试</a>";
+            ul01[0].appendChild(newLink);
+        })();
+    })();
+    (_l.href.indexOf("exam/phone/task-exam?") !== -1||_l.href.indexOf("phone/restart") !== -1)&&(()=>{
+        let startButton = _d.getElementById("start");
+        _w.unrivalTestUrl = false;
+        _w.goToExam = ()=>{
+            let tId = _d.getElementById("testPaperId").value,
+                enc = _d.getElementById("enc").value,
+                testUrl = "https://mooc1.chaoxing.com/exam/test/reVersionTestStartNew?courseId="+courseId+"&classId="+classId+"&tId="+tId+"&enc="+enc;
+            GM_setValue("testUrl",testUrl);
+            _w.self==_w.top&&(_l.href=testUrl);
+        };
+        startButton.setAttribute("onclick","goToExam();");
+    })();
+    _l.href.indexOf("https://mooc1-api.chaoxing.com/exam/phoneExam?courseid=") !== -1&&(()=>{
+        let userAgent = _w.navigator.userAgent;
+        userAgent.indexOf("ChaoXingStudy")==-1&&alert("您的浏览器useragent不正确，无法进入手机端考试，请参考脚本介绍页");
+        setInterval(()=>{
+            try{
+                let testUrl = GM_getValue("testUrl","0");
+                testUrl!="0"&&(_d.visibilityState=="visible"&&(()=>{
+                    GM_setValue("testUrl","0");
+                    _l.href=testUrl;
+                    return true;
+                })()||_l.reload());
+            }catch(err){
+                console.log(err);
+            };
+        },500);
+        _d.getElementsByTagName("html")[0].innerHTML =`
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>手机端考试</title>
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+        <style>
+            body{text-align:center}
+        </style>
+    </head>
+    <body>
+        <div id="dommm" style="margin:0 auto;width:auto;height: 800px;">
+            <iframe id="iframe" src="https://mooc1-api.chaoxing.com/exam/phone/task-list?courseId=`+courseId+`&classId=`+classId+`" width="400px" height="720px"></iframe>
+        </div>
+    </body>
+</html>
+`;
+    })();
+})();
